@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#PBS -N pi
+#PBS -l walltime=02:00:00
+#PBS -l select=8:ncpus=16:mpiprocs=16
+#PBS -j oe
+
+cd $PBS_O_WORKDIR
+echo "Beginning job..."
+
+for i in {1..8}
+do
+	q=$((i * i))
+	echo -e "\nCalculating pi with $q cores"
+	mpirun -np $q ./pi_mpi 1000000000
+done
+
+echo -e "\nDone."
+

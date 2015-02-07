@@ -1,0 +1,10 @@
+*.o
+*.swp
+*.swo
+*~
+*.out
+
+static_mpi
+dynamic_mpi
+
+*.tar.gz
