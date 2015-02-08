@@ -1,7 +1,14 @@
-/* I worked on this assignment alone. I consulted a man page for MPI for how to
- create a derived MPI type based on a C struct found at the following address:
+/* I worked on this assignment alone.
+
+ I consulted a man page for MPI for how to create a derived MPI type based on a
+ C struct found at the following address:
 
  http://mpi.deino.net/mpi_functions/MPI_Type_create_struct.html
+
+ and the man page for MPI for how to tell if a message is waiting to be received
+ on the receive queue (non-blocking):
+
+ http://mpi.deino.net/mpi_functions/MPI_Iprobe.html
 */
 
 #include <stdio.h>
