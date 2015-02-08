@@ -1,18 +1,18 @@
 #!/bin/bash
 
-#PBS -N pi
+#PBS -N workload
 #PBS -l walltime=02:00:00
-#PBS -l select=8:ncpus=16:mpiprocs=16
+#PBS -l select=3:ncpus=4:mpiprocs=4
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
 echo "Beginning job..."
 
-for i in {1..8}
+for i in {1..6}
 do
-	q=$((i * i))
-	echo -e "\nCalculating pi with $q cores"
-	mpirun -np $q ./pi_mpi 1000000000
+	q=$((i * 2))
+	echo -e "\nRunning dynamic balancer with $q workers"
+	mpirun -np $q ./dynamic_mpi
 done
 
 echo -e "\nDone."
