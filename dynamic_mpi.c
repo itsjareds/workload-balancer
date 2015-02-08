@@ -18,7 +18,7 @@
 #include <string.h> /* for memset() */
 #include <mpi.h>
 
-#define WORKLOAD_SIZE 200
+#define WORKLOAD_SIZE 1024
 #define STRUCT_LEN 3
 #define NUM_TYPES 5
 #define MASTER 0
@@ -94,6 +94,7 @@ int main(int argc, char *argv[]){
       } else {
         workload w;
         w.uid = -1;
+        w.f = -255.5;
         send_workload(&w, i);
         finish_worker(i, &finished);
       }
@@ -259,6 +260,7 @@ int handle_workers(workload *queue, int *queue_head, bool blocking) {
         //printf("[%d] Calling finish_worker(%d)\n", MASTER, id);
         finish_worker(id, &finished);
         w.uid = -1;
+        w.f = -255.5;
         send_workload(&w, id);
       }
     }
