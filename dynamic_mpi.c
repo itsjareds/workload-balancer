@@ -14,6 +14,7 @@
 #define WORKLOAD_SIZE 200
 #define STRUCT_LEN 3
 #define NUM_TYPES 5
+#define MASTER 0
 
 typedef int bool;
 #define TRUE 1
@@ -61,24 +62,26 @@ int main(int argc, char *argv[]){
   srand(time(NULL) + rank);
 
   // Generate workload of random ints in [0,4]
-  if (rank == 0) {
+  if (rank == MASTER) {
     times = malloc(sizeof(workload) * size);
     memset(times, 0, sizeof(workload) * size);
 
     for (i = 0; i < WORKLOAD_SIZE; i++) {
       queue[i].uid = i;
       queue[i].i = rand() % NUM_TYPES;
+      queue[i].f = 0.0f;
     }
-    printf("[%d] MAIN WORKLOAD:\t{", rank);
+    printf("[%d] MAIN WORKLOAD: {", rank);
     printArr(queue, WORKLOAD_SIZE);
     printf("}\n");
     fflush(stdout);
 
     copy_workload(&queue[queue_head++], &local_workload);
     // Deal initial round robin workloads
-    for (i = 1; i < size; i++) {
+    for (i = 0; i < size; i++) {
+      if (i == MASTER)
+        continue;
       if (working(queue_head)) {
-        printf("Sending %d to %d\n", queue[i].i, i);
         send_workload(&queue[i], i);
         queue_head++;
       } else {
@@ -89,56 +92,58 @@ int main(int argc, char *argv[]){
       }
     }
   } else {
-    recv_workload(&local_workload, 0);
+    recv_workload(&local_workload, MASTER);
     if (local_workload.uid == -1)
       queue_head = -1;
   }
 
   while (working(queue_head)) {
-    if (rank != 0 || working(queue_head)) {
-      printf("[%d] new workload:\t", rank);
-      printArr(&local_workload, 1);
-      printf("\n");
-      fflush(stdout);
+    if (rank != MASTER || working(queue_head)) {
+      printf("[%d] new workload: %d\n", rank, local_workload.i);
 
       /* Begin computing workload */
       compute_workload(&local_workload);
 
-      printf("[%d] sleep took %.3lf sec\n", rank, local_workload.f);
+      //printf("[%d] sleep took %.3lf sec\n", rank, local_workload.f);
       fflush(stdout);
     }
 
     /* Handle workload returns */
-    if (rank == 0) {
+    if (rank == MASTER) {
+      finished += handle_workers(queue, &queue_head, FALSE);
+
       copy_workload(&local_workload, &queue[local_workload.uid]);
       if (working(queue_head))
         copy_workload(&queue[queue_head++], &local_workload);
-
-      finished += handle_workers(queue, &queue_head, FALSE);
     } else {
-      printf("[%d] returning workload %d...\n", rank, local_workload.uid);
-      send_workload(&local_workload, 0);
-      if (recv_workload(&local_workload, 0) == -1)
+      //printf("[%d] returning workload %d...\n", rank, local_workload.uid);
+      send_workload(&local_workload, MASTER);
+      if (recv_workload(&local_workload, MASTER) == -1)
         queue_head = -1;
     }
     fflush(stdout);
   }
 
-  if (rank == 0) {
-    printf("[0] *Calling finish_worker(0)\n");
-    finish_worker(0, &finished);
+  if (rank == MASTER) {
+    //printf("[%d] *Calling finish_worker(%d)\n", rank, MASTER);
+    finish_worker(MASTER, &finished);
   }
 
-  printf("[%d] Work done...\n", rank);
+  //printf("[%d] Work done...\n", rank);
 
   /* Continue listening until all finished */
-  while (rank == 0 && finished < size) {
-    printf("[%d] Waiting for workload (finished=%d)\n", 0, finished);
+  while (rank == MASTER && finished < size) {
+    printf("[%d] %d/%d finished\n", rank, finished, size);
     finished += handle_workers(queue, &queue_head, TRUE);
   }
 
-  if (rank == 0)
-    printf("[%d] About to exit, finished = %d\n", rank, finished);
+  if (rank == MASTER) {
+    printf("[%d] %d/%d finished (about to exit)\n", rank, finished, size);
+
+  printf("FINAL WORKLOAD: {");
+  printArr(queue, WORKLOAD_SIZE);
+  printf("}\n");
+  }
 
   // /* Send stats back to master */
   // if (rank != 0) {
@@ -208,7 +213,7 @@ int recv_workload(workload *w, int from) {
   MPI_Recv(w, 1, MPI_WORKLOAD, from, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 
   int id = -1;
-  if (w->uid >= 0 && w->uid <= WORKLOAD_SIZE)
+  if (working(w->uid))
     id = stat.MPI_SOURCE;
   return id;
 }
@@ -243,7 +248,7 @@ int handle_workers(workload *queue, int *queue_head, bool blocking) {
       if (working(*queue_head))
         send_workload(&queue[(*queue_head)++], id);
       else {
-        printf("[0] Calling finish_worker(%d)\n", id);
+        //printf("[%d] Calling finish_worker(%d)\n", MASTER, id);
         finish_worker(id, &finished);
         w.uid = -1;
         send_workload(&w, id);
@@ -287,9 +292,11 @@ unsigned int sleeptime(int i) {
 /* Requires count >= 1 */
 void printArr(workload *arr, int count) {
   int i;
-  for (i = 0; i < count - 1; i++)
-    printf("%d, ", arr[i].i);
-  printf("%d", arr[i].i);
+  for (i = 0; i < count; i++) {
+    if (i != 0)
+      printf(", ");
+    printf("(%u, %u, %.3lf)", arr[i].uid, arr[i].i, arr[i].f);
+  }
 }
 
 void create_MPI_Struct(MPI_Datatype *t) {
