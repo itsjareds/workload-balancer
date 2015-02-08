@@ -3,6 +3,8 @@
 *.swo
 *~
 *.out
+workload.o*
+workload.e*
 
 static_mpi
 dynamic_mpi
