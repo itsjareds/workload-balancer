@@ -68,11 +68,12 @@ int main(int argc, char *argv[]){
   // Seed rand for each process
   srand(time(NULL) + rank);
 
-  // Generate workload of random ints in [0,4]
+  /* Set up program execution */
   if (rank == MASTER) {
     times = malloc(sizeof(workload) * size);
     memset(times, 0, sizeof(workload) * size);
 
+    // Generate workload of random ints in [0,4]
     for (i = 0; i < WORKLOAD_SIZE; i++) {
       queue[i].uid = i;
       queue[i].i = rand() % NUM_TYPES;
@@ -83,12 +84,11 @@ int main(int argc, char *argv[]){
     printf("}\n");
     fflush(stdout);
 
-    copy_workload(&queue[queue_head++], &local_workload);
     // Deal initial round robin workloads
     for (i = 0; i < size; i++) {
-      if (i == MASTER)
-        continue;
-      if (working(queue_head)) {
+      if (i == MASTER) {
+        copy_workload(&queue[queue_head++], &local_workload);
+      } else if (working(queue_head)) {
         send_workload(&queue[i], i);
         queue_head++;
       } else {
@@ -104,6 +104,7 @@ int main(int argc, char *argv[]){
       queue_head = -1;
   }
 
+  /* Main computation loop */
   while (working(queue_head)) {
     if (rank != MASTER || working(queue_head)) {
       printf("[%d] new workload: %d\n", rank, local_workload.i);
@@ -147,9 +148,9 @@ int main(int argc, char *argv[]){
   if (rank == MASTER) {
     printf("[%d] %d/%d finished (about to exit)\n", rank, finished, size);
 
-  printf("FINAL WORKLOAD: {");
-  printArr(queue, WORKLOAD_SIZE);
-  printf("}\n");
+    printf("[%d] FINAL WORKLOAD: {", rank);
+    printArr(queue, WORKLOAD_SIZE);
+    printf("}\n");
   }
 
   // /* Send stats back to master */
