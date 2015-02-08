@@ -34,12 +34,15 @@ typedef struct {
 } workload;
 
 MPI_Datatype MPI_WORKLOAD;
+workload stats_types[NUM_TYPES];
+workload *stats_workers;
 
 void printArr(workload *arr, int count);
 void create_MPI_Struct(MPI_Datatype *t);
 unsigned int sleeptime(int i);
 void compute_workload(workload *w);
 int working(int queue_head);
+void update_stats(workload *w, int id);
 void copy_workload(workload *src, workload *dest);
 void send_workload(workload *w, int to);
 int recv_workload(workload *w, int from);
@@ -51,7 +54,6 @@ int main(int argc, char *argv[]){
   int rank, size;
   workload queue[WORKLOAD_SIZE];
   workload local_workload;
-  workload *times;
   int i, j, queue_head = 0, finished = 0;
   double start, stop, total; /* timing variables */
   MPI_Status status;
@@ -70,8 +72,8 @@ int main(int argc, char *argv[]){
 
   /* Set up program execution */
   if (rank == MASTER) {
-    times = malloc(sizeof(workload) * size);
-    memset(times, 0, sizeof(workload) * size);
+    stats_workers = malloc(sizeof(workload) * size);
+    memset(stats_workers, 0, sizeof(workload) * size);
 
     // Generate workload of random ints in [0,4]
     for (i = 0; i < WORKLOAD_SIZE; i++) {
@@ -121,7 +123,9 @@ int main(int argc, char *argv[]){
     if (rank == MASTER) {
       finished += handle_workers(queue, &queue_head, FALSE);
 
+      // Handle self
       copy_workload(&local_workload, &queue[local_workload.uid]);
+      update_stats(&local_workload, MASTER);
       if (working(queue_head))
         copy_workload(&queue[queue_head++], &local_workload);
     } else {
@@ -152,50 +156,25 @@ int main(int argc, char *argv[]){
     printf("[%d] FINAL WORKLOAD: {", rank);
     printArr(queue, WORKLOAD_SIZE);
     printf("}\n");
-  }
 
-  // /* Send stats back to master */
-  // if (rank != 0) {
-  //   MPI_Send(local_result, NUM_TYPES, MPI_WORKLOAD, 0, rank, MPI_COMM_WORLD);
-  // } else {
-  //   /* Sum master work times */
-  //   for (i = 0; i < NUM_TYPES; i++) {
-  //     times[0].i += local_result[i].i;
-  //     times[0].f += local_result[i].f;
-  //   }
-  //
-  //   workload recvbuf[NUM_TYPES];
-  //   for (i = 1; i < size; i++) {
-  //     MPI_Recv(recvbuf, NUM_TYPES, MPI_WORKLOAD, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-  //
-  //     for (j = 0; j < NUM_TYPES; j++) {
-  //       local_result[j].i += recvbuf[j].i;
-  //       local_result[j].f += recvbuf[j].f;
-  //       times[status.MPI_SOURCE].i += recvbuf[j].i;
-  //       times[status.MPI_SOURCE].f += recvbuf[j].f;
-  //     }
-  //   }
-  //
-  //   printf("\n");
-  //
-  //   for (i = 0; i < NUM_TYPES; i++) {
-  //     workload *w = &local_result[i];
-  //     double avg = (w->i > 0) ? w->f / w->i : 0.0f;
-  //     printf("Type %d:\tn=%d\ttot=%.3lf\tavg=%.3lf\n", i, w->i, w->f, avg);
-  //   }
-  //
-  //   printf("\n");
-  //
-  //   for (i = 0; i < size; i++) {
-  //     workload *w = &times[i];
-  //     double avg = (w->i > 0) ? w->f / w->i : 0.0f;
-  //     printf("Node %d:\tn=%d\ttot=%.3lf\tavg=%.3lf\n", i, w->i, w->f, avg);
-  //   }
-  //
-  //   stop = MPI_Wtime();
-  //   printf("\nTotal execution time: %.3lf sec\n", stop - start);
-  //   free(times);
-  // }
+    /* Print out statistics */
+    printf("\n### Statistics ###\n");
+    for (i = 0; i < NUM_TYPES; i++) {
+      workload *w = &stats_types[i];
+      double avg = (w->i > 0) ? w->f / w->i : 0.0f;
+      printf("Type %d:\tn=%d\ttot=%.3lf\tavg=%.3lf\n", i, w->i, w->f, avg);
+    }
+    printf("\n");
+    for (i = 0; i < size; i++) {
+      workload *w = &stats_workers[i];
+      double avg = (w->i > 0) ? w->f / w->i : 0.0f;
+      printf("Node %d:\tn=%d\ttot=%.3lf\tavg=%.3lf\n", i, w->i, w->f, avg);
+    }
+
+    stop = MPI_Wtime();
+    printf("\nTotal execution time: %.3lf sec\n", stop - start);
+    free(stats_workers);
+  }
 
   printf("[%d] Done.\n", rank);
   MPI_Finalize();
@@ -205,6 +184,14 @@ int main(int argc, char *argv[]){
 
 int working(int queue_head) {
   return (queue_head >= 0 && queue_head < WORKLOAD_SIZE) ? TRUE : FALSE;
+}
+
+void update_stats(workload *w, int id) {
+  stats_workers[id].i++;
+  stats_workers[id].f += w->f;
+
+  stats_types[w->i].i++;
+  stats_types[w->i].f += w->f;
 }
 
 void copy_workload(workload *src, workload *dest) {
@@ -254,6 +241,7 @@ int handle_workers(workload *queue, int *queue_head, bool blocking) {
     id = recv_workload(&w, MPI_ANY_SOURCE);
     if (id != -1) {
       copy_workload(&w, &queue[w.uid]);
+      update_stats(&w, id);
       if (working(*queue_head))
         send_workload(&queue[(*queue_head)++], id);
       else {
