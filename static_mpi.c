@@ -181,7 +181,7 @@ void printArr(workload *arr, int count) {
 }
 
 void create_MPI_Struct(MPI_Datatype *t) {
-  MPI_Datatype types[STRUCT_LEN] = {MPI_INT, MPI_DOUBLE};
+  MPI_Datatype types[STRUCT_LEN] = {MPI_UNSIGNED, MPI_DOUBLE};
   int blocklen[STRUCT_LEN] = {1, 1};
   MPI_Aint disp[STRUCT_LEN];
 

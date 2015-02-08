@@ -6,16 +6,16 @@ MPIFLAGS=
 
 TAR=tar
 
-BINS=static_mpi
-ARCHIVE=LICENSE README.md Makefile workload.pbs static_mpi.c
+BINS=static_mpi dynamic_mpi
+ARCHIVE=LICENSE README.md Makefile workload.pbs static_mpi.c dynamic_mpi.c
 
 all: $(BINS)
 
-static_mpi: static_mpi.c
+%_mpi: %_mpi.c
 	$(MPICC) $(MPIFLAGS) -o $@ $<
 
 %: %.c
-	$(CC) $(CFLAGS) -o $@ $< 
+	$(CC) $(CFLAGS) -o $@ $<
 
 archive: $(ARCHIVE)
 	$(TAR) -czf asg2.tar.gz $(ARCHIVE)
