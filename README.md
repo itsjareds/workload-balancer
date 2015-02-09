@@ -30,7 +30,11 @@ The [dynamic balancer](dynamic_mpi.c) uses a round-robin approach to serving wor
 unit is given to each worker node at a time. When the work is complete, the
 node returns the finished workload to the master node with additional elapsed
 time data. If there is more work to be done, the master node will send the
-worker a new workload. This continues until all workloads are complete.
+worker a new workload. This continues until all workloads are complete. The
+master node is not a worker; it only coordinates the rest of the nodes.
+
+A comparison of the approach of having the master node as a worker versus a
+coordination-only master node (fastdynamic) can be found in [Pretty Graphs](#pretty-graphs).
 
 Known issues
 ============
@@ -38,10 +42,7 @@ Known issues
 * The static balancing algorithm could use some love and care. I am not sure the
 z-score is reasonable, or if it should be scaled according to the number of
 workers.
-* Currently, the master node also acts as a worker. The dynamic balancer could
-be optimized for increasing `n` if the master node dropped all worker
-responsibilities and only listened for workload returns. This would increase the
-throughput of all nodes.
+* The 
 
 How to build
 ============
