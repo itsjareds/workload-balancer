@@ -21,7 +21,7 @@ static_mpi: static_mpi.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 archive: $(ARCHIVE)
-	$(TAR) -czf asg2.tar.gz $(ARCHIVE)
+	$(TAR) -czf asg3.tar.gz $(ARCHIVE)
 
 clean:
 	rm -f $(BINS)
