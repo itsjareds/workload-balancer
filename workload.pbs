@@ -1,12 +1,23 @@
 #!/bin/bash
 
 #PBS -N workload
-#PBS -l walltime=02:00:00
+#PBS -l walltime=12:00:00
 #PBS -l select=3:ncpus=4:mpiprocs=4
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
 echo "Beginning job..."
+
+#echo "### STATIC BALANCERS ###"
+
+#for i in {1..6}
+#do
+#	q=$((i * 2))
+#	echo -e "\nRunning static balancer with $q workers"
+#	mpirun -np $q ./static_mpi
+#done
+
+echo "### DYNAMIC BALANCERS ###"
 
 for i in {1..6}
 do
