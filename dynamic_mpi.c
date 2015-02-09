@@ -88,7 +88,7 @@ int main(int argc, char *argv[]){
     // Deal initial round robin workloads
     for (i = 0; i < size; i++) {
       if (i == MASTER) {
-        copy_workload(&queue[queue_head++], &local_workload);
+        continue;
       } else if (working(queue_head)) {
         send_workload(&queue[i], i);
         queue_head++;
@@ -107,39 +107,24 @@ int main(int argc, char *argv[]){
   }
 
   /* Main computation loop */
-  while (working(queue_head)) {
-    if (rank != MASTER || working(queue_head))
-      compute_workload(&local_workload);
+  while (rank != MASTER && working(queue_head)) {
+    compute_workload(&local_workload);
 
-    /* Handle workload returns */
-    if (rank == MASTER) {
-      finished += handle_workers(queue, &queue_head, FALSE);
-
-      // Handle self
-      copy_workload(&local_workload, &queue[local_workload.uid]);
-      update_stats(&local_workload, MASTER);
-      if (working(queue_head))
-        copy_workload(&queue[queue_head++], &local_workload);
-    } else {
-      send_workload(&local_workload, MASTER);
-      if (recv_workload(&local_workload, MASTER) == -1)
-        queue_head = -1;
-    }
-    fflush(stdout);
+    // Return results to master
+    send_workload(&local_workload, MASTER);
+    if (recv_workload(&local_workload, MASTER) == -1)
+      queue_head = -1;
   }
 
-  if (rank == MASTER)
-    finish_worker(MASTER, &finished);
-
   /* Continue listening until all finished */
-  while (rank == MASTER && finished < size) {
-    printf("[%d] %d/%d finished\n", rank, finished, size);
-    finished += handle_workers(queue, &queue_head, TRUE);
+  while (rank == MASTER && finished < size - 1) {
+    int added = handle_workers(queue, &queue_head, TRUE);
+    finished += added;
+    if (added > 0)
+      printf("[%d] %d/%d finished\n", rank, finished, size - 1);
   }
 
   if (rank == MASTER) {
-    printf("[%d] %d/%d finished (about to exit)\n", rank, finished, size);
-
     /* Print out statistics */
     printf("\n### Statistics ###\n");
     for (i = 0; i < NUM_TYPES; i++) {
