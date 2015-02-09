@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=
 
 MPICC=mpicc
-MPIFLAGS=
+MPIFLAGS=-Wall
 
 TAR=tar
 
