@@ -16,7 +16,7 @@ Discussion
 
 ### Static workload balancer
 
-The static balancer [static_mpi.c](static_mpi.c) uses a contiguous block
+The [static balancer](static_mpi.c) uses a contiguous block
 distribution algorithm. The main workload (an array found on the master node) is
 divided up into `n` blocks, where n is the number of MPI processes. Rather than 
 using the naïve approach of giving each process `WORKLOAD_SIZE/n` units, the 
@@ -26,7 +26,7 @@ workload fairly evenly distributed among processes.
 
 ### Dynamic workload balancer
 
-The dynamic balancer uses a round-robin approach to serving workloads. A single
+The [dynamic balancer](dynamic_mpi.c) uses a round-robin approach to serving workloads. A single
 unit is given to each worker node at a time. When the work is complete, the
 node returns the finished workload to the master node with additional elapsed
 time data. If there is more work to be done, the master node will send the
