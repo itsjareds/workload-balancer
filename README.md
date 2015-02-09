@@ -1,4 +1,4 @@
-dynamic-balancer
+workload-balancer
 ================
 ### Author
 
