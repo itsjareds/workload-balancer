@@ -46,3 +46,9 @@ throughput of all nodes.
 How to build
 ============
 Use the Makefile by running `make`.
+
+Pretty graphs
+=============
+![static](https://cloud.githubusercontent.com/assets/941126/6102244/a6dc11f2-b000-11e4-8931-952ef42b1be5.png)
+
+![dynamic](https://cloud.githubusercontent.com/assets/941126/6102243/a6dbaae6-b000-11e4-9c0f-520b9b0e4875.png)
