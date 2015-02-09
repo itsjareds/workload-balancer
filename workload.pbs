@@ -6,6 +6,17 @@
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
+
+if [ ! -f ./static_mpi ] || [ ! -f ./dynamic_mpi ]
+then
+	echo "Program not compiled! Attempting to make..."
+	make
+	if [ $? -ne 0 ]; then
+		echo "Could not make."
+		exit 1
+	fi
+fi
+
 echo "Beginning job..."
 
 echo "### STATIC BALANCERS ###"
