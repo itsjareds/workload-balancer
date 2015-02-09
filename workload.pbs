@@ -8,14 +8,14 @@
 cd $PBS_O_WORKDIR
 echo "Beginning job..."
 
-#echo "### STATIC BALANCERS ###"
+echo "### STATIC BALANCERS ###"
 
-#for i in {1..6}
-#do
-#	q=$((i * 2))
-#	echo -e "\nRunning static balancer with $q workers"
-#	mpirun -np $q ./static_mpi
-#done
+for i in {1..6}
+do
+	q=$((i * 2))
+	echo -e "\nRunning static balancer with $q workers"
+	mpirun -np $q ./static_mpi
+done
 
 echo "### DYNAMIC BALANCERS ###"
 
