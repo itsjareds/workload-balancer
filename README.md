@@ -35,6 +35,8 @@ master node is not a worker; it only coordinates the rest of the nodes.
 
 A comparison of the approach of having the master node as a worker versus a
 coordination-only master node (fastdynamic) can be found in [Pretty Graphs](#pretty-graphs).
+The fastdynamic algorithm has `n-1` workers, while the dynamic algorithm has
+`n` workers.
 
 Known issues
 ============
@@ -42,7 +44,6 @@ Known issues
 * The static balancing algorithm could use some love and care. I am not sure the
 z-score is reasonable, or if it should be scaled according to the number of
 workers.
-* The 
 
 How to build
 ============
@@ -50,6 +51,8 @@ Use the Makefile by running `make`.
 
 Pretty graphs
 =============
-![static](https://cloud.githubusercontent.com/assets/941126/6102244/a6dc11f2-b000-11e4-8931-952ef42b1be5.png)
+![static](https://cloud.githubusercontent.com/assets/941126/6117478/c5e11c14-b082-11e4-9892-47391e886c17.png)
 
-![dynamic](https://cloud.githubusercontent.com/assets/941126/6102243/a6dbaae6-b000-11e4-9c0f-520b9b0e4875.png)
+![dynamic](https://cloud.githubusercontent.com/assets/941126/6117481/cab123b0-b082-11e4-912b-dbc45794f99d.png)
+
+![fastdyn](https://cloud.githubusercontent.com/assets/941126/6117484/ccb6edd4-b082-11e4-8d23-12a9f2ea7ef9.png)
