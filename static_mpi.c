@@ -1,4 +1,7 @@
-/* I worked on this assignment alone. I consulted a man page for MPI for how to
+/*
+ Author: Jared Klingenberger <klinge2@clemson.edu>
+
+ I worked on this assignment alone. I consulted a man page for MPI for how to
  create a derived MPI type based on a C struct found at the following address:
 
  http://mpi.deino.net/mpi_functions/MPI_Type_create_struct.html
@@ -22,7 +25,6 @@ typedef struct {
   double f;
 } workload;
 
-void printArr(workload *arr, int count);
 void create_MPI_Struct(MPI_Datatype *t);
 unsigned int sleeptime(int i);
 void partition_scheme(workload *queue, int *partitions, int size);
@@ -30,15 +32,15 @@ void compute_workload(workload *w);
 
 int main(int argc, char *argv[]){
   int rank, size;
-  int *partitions, *displs;
+  int *partitions = NULL, *displs = NULL;
   workload queue[WORKLOAD_SIZE];
-  workload *local_queue;
+  workload *local_queue = NULL;
   workload local_result[NUM_TYPES];
-  workload *times;
+  workload *times = NULL;
   int local_size;
   int i, j;
   MPI_Datatype MPI_WORKLOAD;
-  double start, stop, total; /* timing variables */
+  double start, stop; /* timing variables */
   MPI_Status status;
 
   memset(&local_result, 0, sizeof(local_result));
@@ -65,12 +67,11 @@ int main(int argc, char *argv[]){
     memset(partitions, 0, sizeof(int) * size);
     memset(displs, 0, sizeof(int) * size);
 
+    printf("Starting on %d workloads...\n", WORKLOAD_SIZE);
+
     for (i = 0; i < WORKLOAD_SIZE; i++)
       queue[i].i = rand() % NUM_TYPES;
 
-    printf("[%d] MAIN WORKLOAD:\t{", rank);
-    printArr(queue, WORKLOAD_SIZE);
-    printf("}\n");
     fflush(stdout);
 
     partition_scheme(queue, partitions, size);
@@ -194,7 +195,6 @@ void partition_scheme(workload *queue, int *partitions, int size) {
   for (i = 0; i < WORKLOAD_SIZE; i++)
     sum += queue[i].i;
 
-  printf("sum = %d  avg = %lf\n", sum, (float)sum/(float)size);
   avg = (float)sum / WORKLOAD_SIZE;
   avg_per_core = (float)sum / (float)size;
 
@@ -226,17 +226,6 @@ void partition_scheme(workload *queue, int *partitions, int size) {
   partitions[cur] = WORKLOAD_SIZE - i;
 
   printf("Average: %f   std dev: %f   range: %f\n", avg_per_core, sigma, range);
-  for (i = 0; i < size; i++)
-    printf("%d | ", partitions[i]);
-  printf("\n");
-}
-
-/* Requires count >= 1 */
-void printArr(workload *arr, int count) {
-  int i;
-  for (i = 0; i < count - 1; i++)
-    printf("%d, ", arr[i].i);
-  printf("%d", arr[i].i);
 }
 
 void create_MPI_Struct(MPI_Datatype *t) {

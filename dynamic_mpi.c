@@ -1,4 +1,7 @@
-/* I worked on this assignment alone.
+/*
+ Author: Jared Klingenberger <klinge2@clemson.edu>
+
+ I worked on this assignment alone.
 
  I consulted a man page for MPI for how to create a derived MPI type based on a
  C struct found at the following address:
@@ -37,7 +40,6 @@ MPI_Datatype MPI_WORKLOAD;
 workload stats_types[NUM_TYPES];
 workload *stats_workers;
 
-void printArr(workload *arr, int count);
 void create_MPI_Struct(MPI_Datatype *t);
 unsigned int sleeptime(int i);
 void compute_workload(workload *w);
@@ -54,9 +56,8 @@ int main(int argc, char *argv[]){
   int rank, size;
   workload queue[WORKLOAD_SIZE];
   workload local_workload;
-  int i, j, queue_head = 0, finished = 0;
-  double start, stop, total; /* timing variables */
-  MPI_Status status;
+  int i, queue_head = 0, finished = 0;
+  double start, stop; /* timing variables */
 
   MPI_Init(&argc,&argv);
 
@@ -75,16 +76,14 @@ int main(int argc, char *argv[]){
     stats_workers = malloc(sizeof(workload) * size);
     memset(stats_workers, 0, sizeof(workload) * size);
 
+    printf("Starting on %d workloads...\n", WORKLOAD_SIZE);
+
     // Generate workload of random ints in [0,4]
     for (i = 0; i < WORKLOAD_SIZE; i++) {
       queue[i].uid = i;
       queue[i].i = rand() % NUM_TYPES;
       queue[i].f = 0.0f;
     }
-    printf("[%d] MAIN WORKLOAD: {", rank);
-    printArr(queue, WORKLOAD_SIZE);
-    printf("}\n");
-    fflush(stdout);
 
     // Deal initial round robin workloads
     for (i = 0; i < size; i++) {
@@ -109,15 +108,8 @@ int main(int argc, char *argv[]){
 
   /* Main computation loop */
   while (working(queue_head)) {
-    if (rank != MASTER || working(queue_head)) {
-      //printf("[%d] new workload: %d\n", rank, local_workload.i);
-
-      /* Begin computing workload */
+    if (rank != MASTER || working(queue_head))
       compute_workload(&local_workload);
-
-      //printf("[%d] sleep took %.3lf sec\n", rank, local_workload.f);
-      fflush(stdout);
-    }
 
     /* Handle workload returns */
     if (rank == MASTER) {
@@ -129,7 +121,6 @@ int main(int argc, char *argv[]){
       if (working(queue_head))
         copy_workload(&queue[queue_head++], &local_workload);
     } else {
-      //printf("[%d] returning workload %d...\n", rank, local_workload.uid);
       send_workload(&local_workload, MASTER);
       if (recv_workload(&local_workload, MASTER) == -1)
         queue_head = -1;
@@ -137,12 +128,8 @@ int main(int argc, char *argv[]){
     fflush(stdout);
   }
 
-  if (rank == MASTER) {
-    //printf("[%d] *Calling finish_worker(%d)\n", rank, MASTER);
+  if (rank == MASTER)
     finish_worker(MASTER, &finished);
-  }
-
-  //printf("[%d] Work done...\n", rank);
 
   /* Continue listening until all finished */
   while (rank == MASTER && finished < size) {
@@ -152,10 +139,6 @@ int main(int argc, char *argv[]){
 
   if (rank == MASTER) {
     printf("[%d] %d/%d finished (about to exit)\n", rank, finished, size);
-
-    // printf("[%d] FINAL WORKLOAD: {", rank);
-    // printArr(queue, WORKLOAD_SIZE);
-    // printf("}\n");
 
     /* Print out statistics */
     printf("\n### Statistics ###\n");
@@ -245,7 +228,6 @@ int handle_workers(workload *queue, int *queue_head, bool blocking) {
       if (working(*queue_head))
         send_workload(&queue[(*queue_head)++], id);
       else {
-        //printf("[%d] Calling finish_worker(%d)\n", MASTER, id);
         finish_worker(id, &finished);
         w.uid = -1;
         w.f = 0.0f;
@@ -260,7 +242,6 @@ int handle_workers(workload *queue, int *queue_head, bool blocking) {
 }
 
 void finish_worker(int id, int *finished) {
-  printf("##### Finishing worker %d\n", id);
   *finished += 1;
 }
 
@@ -285,16 +266,6 @@ unsigned int sleeptime(int i) {
       break;
   }
   return ret;
-}
-
-/* Requires count >= 1 */
-void printArr(workload *arr, int count) {
-  int i;
-  for (i = 0; i < count; i++) {
-    if (i != 0)
-      printf(", ");
-    printf("(%u, %u, %.3lf)", arr[i].uid, arr[i].i, arr[i].f);
-  }
 }
 
 void create_MPI_Struct(MPI_Datatype *t) {
