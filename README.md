@@ -55,4 +55,4 @@ Pretty graphs
 
 ![dynamic](https://cloud.githubusercontent.com/assets/941126/6117481/cab123b0-b082-11e4-912b-dbc45794f99d.png)
 
-![fastdyn](https://cloud.githubusercontent.com/assets/941126/6117484/ccb6edd4-b082-11e4-8d23-12a9f2ea7ef9.png)
+![fastdyn](https://cloud.githubusercontent.com/assets/941126/6118105/16ff6204-b088-11e4-9476-c82c70132cca.png)
