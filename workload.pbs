@@ -33,8 +33,9 @@ echo "### DYNAMIC BALANCERS ###"
 for i in {1..6}
 do
 	q=$((i * 2))
+	p=$((q + 1))
 	echo -e "\nRunning dynamic balancer with $q workers"
-	mpirun -np $q ./dynamic_mpi
+	mpirun -np $p ./dynamic_mpi
 done
 
 echo -e "\nDone."
