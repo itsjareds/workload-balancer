@@ -9,11 +9,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h> /* for memset() */
+#include <math.h>   /* for sqrt() */
 #include <mpi.h>
 
-#define WORKLOAD_SIZE 8
+#define WORKLOAD_SIZE 1024`
 #define STRUCT_LEN 2
 #define NUM_TYPES 5
+#define ZSCORE 0.067
 
 typedef struct {
   unsigned int i;
@@ -23,10 +25,12 @@ typedef struct {
 void printArr(workload *arr, int count);
 void create_MPI_Struct(MPI_Datatype *t);
 unsigned int sleeptime(int i);
+void partition_scheme(workload *queue, int *partitions, int size);
 void compute_workload(workload *w);
 
 int main(int argc, char *argv[]){
   int rank, size;
+  int *partitions;
   workload queue[WORKLOAD_SIZE];
   workload *local_queue;
   workload local_result[NUM_TYPES];
@@ -58,16 +62,24 @@ int main(int argc, char *argv[]){
   // Generate workload of random ints in [0,4]
   if (rank == 0) {
     times = malloc(sizeof(workload) * size);
-    memset(times, 0, sizeof(workload) * size);
+    partitions = malloc(sizeof(int) * size);
 
-    for (i = 0; i < WORKLOAD_SIZE; i++) {
+    memset(times, 0, sizeof(workload) * size);
+    memset(partitions, 0, sizeof(int) * size);
+
+    for (i = 0; i < WORKLOAD_SIZE; i++)
       queue[i].i = rand() % NUM_TYPES;
-    }
+
     printf("[%d] MAIN WORKLOAD:\t{", rank);
     printArr(queue, WORKLOAD_SIZE);
     printf("}\n");
     fflush(stdout);
+
+    partition_scheme(queue, partitions, size);
   }
+
+  MPI_Finalize();
+  exit(0);
 
   // Use MPI_Scatter to distribute the work
   MPI_Scatter(queue, local_size, MPI_WORKLOAD, local_queue, local_size, MPI_WORKLOAD, 0, MPI_COMM_WORLD);
@@ -131,6 +143,7 @@ int main(int argc, char *argv[]){
     stop = MPI_Wtime();
     printf("\nTotal execution time: %.3lf sec\n", stop - start);
     free(times);
+    free(partitions);
   }
 
   MPI_Finalize();
@@ -170,6 +183,53 @@ unsigned int sleeptime(int i) {
       break;
   }
   return ret;
+}
+
+/* Calculate partitioning scheme */
+void partition_scheme(workload *queue, int *partitions, int size) {
+  int i, cur, sum;
+  float avg, avg_per_core, sigma, range;
+
+  // Calculate mean
+  sum = 0;
+  for (i = 0; i < WORKLOAD_SIZE; i++)
+    sum += queue[i].i;
+
+  printf("sum = %d  avg = %lf\n", sum, (float)sum/(float)size);
+  avg = (float)sum / WORKLOAD_SIZE;
+  avg_per_core = (float)sum / (float)size;
+
+  // Calculate standard deviation
+  sigma = 0;
+  for (i = 0; i < WORKLOAD_SIZE; i++) {
+    float dist = queue[i].i - (float)avg;
+    sigma += dist * dist;
+  }
+  sigma = sigma / (float)size;
+  sigma = sqrt(sigma);
+  range = ZSCORE * sigma + avg;
+
+  i = 0;
+  for (cur = 0; cur < size - 1; cur++) {
+    int o;
+    sum = 0;
+
+    for (o = i; o < WORKLOAD_SIZE; o++) {
+      if (sum + queue[o].i < avg_per_core + range)
+        sum += queue[o].i;
+      else break;
+    }
+    //printf("min range: %lf\n", avg_per_core - range);
+    //printf("(%d) i = %d   o = %d   o-i = %d\n", cur, i, o, o - i);
+    partitions[cur] = o - i;
+    i += o - i;
+  }
+  partitions[cur] = WORKLOAD_SIZE - i;
+
+  printf("Average: %f   std dev: %f   range: %f\n", avg_per_core, sigma, range);
+  for (i = 0; i < size; i++)
+    printf("%d | ", partitions[i]);
+  printf("\n");
 }
 
 /* Requires count >= 1 */

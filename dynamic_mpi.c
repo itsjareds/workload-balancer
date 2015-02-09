@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
       } else {
         workload w;
         w.uid = -1;
-        w.f = -255.5;
+        w.f = 0.0f;
         send_workload(&w, i);
         finish_worker(i, &finished);
       }
@@ -248,7 +248,7 @@ int handle_workers(workload *queue, int *queue_head, bool blocking) {
         //printf("[%d] Calling finish_worker(%d)\n", MASTER, id);
         finish_worker(id, &finished);
         w.uid = -1;
-        w.f = -255.5;
+        w.f = 0.0f;
         send_workload(&w, id);
       }
     }
