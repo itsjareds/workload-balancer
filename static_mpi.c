@@ -12,10 +12,10 @@
 #include <math.h>   /* for sqrt() */
 #include <mpi.h>
 
-#define WORKLOAD_SIZE 1024`
+#define WORKLOAD_SIZE 1024
 #define STRUCT_LEN 2
 #define NUM_TYPES 5
-#define ZSCORE 0.067
+#define ZSCORE 0.130
 
 typedef struct {
   unsigned int i;
@@ -30,7 +30,7 @@ void compute_workload(workload *w);
 
 int main(int argc, char *argv[]){
   int rank, size;
-  int *partitions;
+  int *partitions, *displs;
   workload queue[WORKLOAD_SIZE];
   workload *local_queue;
   workload local_result[NUM_TYPES];
@@ -55,17 +55,15 @@ int main(int argc, char *argv[]){
   // Seed rand for each process
   srand(time(NULL) + rank);
 
-  // Allocate memory for local_queue
-  local_size = WORKLOAD_SIZE / size;
-  local_queue = malloc(sizeof(workload) * local_size);
-
   // Generate workload of random ints in [0,4]
   if (rank == 0) {
     times = malloc(sizeof(workload) * size);
     partitions = malloc(sizeof(int) * size);
+    displs = malloc(sizeof(int) * size);
 
     memset(times, 0, sizeof(workload) * size);
     memset(partitions, 0, sizeof(int) * size);
+    memset(displs, 0, sizeof(int) * size);
 
     for (i = 0; i < WORKLOAD_SIZE; i++)
       queue[i].i = rand() % NUM_TYPES;
@@ -76,18 +74,21 @@ int main(int argc, char *argv[]){
     fflush(stdout);
 
     partition_scheme(queue, partitions, size);
+
+    // create displacements array from partition sizes
+    for (i = 1; i < size; i++)
+      displs[i] += displs[i-1] + partitions[i-1];
   }
 
-  MPI_Finalize();
-  exit(0);
+  // Send local partition sizes
+  MPI_Scatter(partitions, 1, MPI_INT, &local_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  // Use MPI_Scatter to distribute the work
-  MPI_Scatter(queue, local_size, MPI_WORKLOAD, local_queue, local_size, MPI_WORKLOAD, 0, MPI_COMM_WORLD);
+  // Allocate memory for local_queue now that we have a size
+  local_queue = malloc(sizeof(workload) * local_size);
+  printf("[%d] local_size = %d\n", rank, local_size);
 
-  printf("[%d] local_workload:\t{", rank);
-  printArr(local_queue, local_size);
-  printf("}\n");
-  fflush(stdout);
+  // Use MPI_Scatter to distribute the actual workloads
+  MPI_Scatterv(queue, partitions, displs, MPI_WORKLOAD, local_queue, local_size, MPI_WORKLOAD, 0, MPI_COMM_WORLD);
 
   /* Begin computing workload */
   for (i = 0; i < local_size; i++) {
@@ -97,9 +98,6 @@ int main(int argc, char *argv[]){
 
     local_result[w->i].i += 1;
     local_result[w->i].f += w->f;
-
-    printf("[%d] sleep took %.3lf sec\n", rank, w->f);
-    fflush(stdout);
   }
 
   /* Send stats back to master */
@@ -124,7 +122,7 @@ int main(int argc, char *argv[]){
       }
     }
 
-    printf("\n");
+    printf("\n### Statistics ###\n");
 
     for (i = 0; i < NUM_TYPES; i++) {
       workload *w = &local_result[i];
@@ -144,6 +142,7 @@ int main(int argc, char *argv[]){
     printf("\nTotal execution time: %.3lf sec\n", stop - start);
     free(times);
     free(partitions);
+    free(displs);
   }
 
   MPI_Finalize();
@@ -209,6 +208,7 @@ void partition_scheme(workload *queue, int *partitions, int size) {
   sigma = sqrt(sigma);
   range = ZSCORE * sigma + avg;
 
+  // Decide partition sizes within range of mean
   i = 0;
   for (cur = 0; cur < size - 1; cur++) {
     int o;
@@ -219,8 +219,7 @@ void partition_scheme(workload *queue, int *partitions, int size) {
         sum += queue[o].i;
       else break;
     }
-    //printf("min range: %lf\n", avg_per_core - range);
-    //printf("(%d) i = %d   o = %d   o-i = %d\n", cur, i, o, o - i);
+
     partitions[cur] = o - i;
     i += o - i;
   }

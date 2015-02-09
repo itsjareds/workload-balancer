@@ -110,7 +110,7 @@ int main(int argc, char *argv[]){
   /* Main computation loop */
   while (working(queue_head)) {
     if (rank != MASTER || working(queue_head)) {
-      printf("[%d] new workload: %d\n", rank, local_workload.i);
+      //printf("[%d] new workload: %d\n", rank, local_workload.i);
 
       /* Begin computing workload */
       compute_workload(&local_workload);
@@ -153,9 +153,9 @@ int main(int argc, char *argv[]){
   if (rank == MASTER) {
     printf("[%d] %d/%d finished (about to exit)\n", rank, finished, size);
 
-    printf("[%d] FINAL WORKLOAD: {", rank);
-    printArr(queue, WORKLOAD_SIZE);
-    printf("}\n");
+    // printf("[%d] FINAL WORKLOAD: {", rank);
+    // printArr(queue, WORKLOAD_SIZE);
+    // printf("}\n");
 
     /* Print out statistics */
     printf("\n### Statistics ###\n");
