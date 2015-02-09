@@ -53,6 +53,6 @@ Pretty graphs
 =============
 ![static](https://cloud.githubusercontent.com/assets/941126/6117478/c5e11c14-b082-11e4-9892-47391e886c17.png)
 
-![dynamic](https://cloud.githubusercontent.com/assets/941126/6117481/cab123b0-b082-11e4-912b-dbc45794f99d.png)
+![dynamic](https://cloud.githubusercontent.com/assets/941126/6118192/1e2c9ece-b089-11e4-9b9b-9c29a078d744.png)
 
 ![fastdyn](https://cloud.githubusercontent.com/assets/941126/6118105/16ff6204-b088-11e4-9476-c82c70132cca.png)
